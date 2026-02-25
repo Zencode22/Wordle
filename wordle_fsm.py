@@ -1,20 +1,64 @@
 #!/usr/bin/env python3
 """
-Wordle Finite State Machine (FSM) – console version
-
-Author: Connor Lonergan
-Purpose: Demonstrate state‑machine design without Boolean state flags.
+Wordle Finite State Machine (FSM) – console version with on‑screen keyboard
 """
 
 import enum
 import random
 import sys
-from typing import List
+from typing import List, Dict
 
+# --------------------------------------------------------------
+# Colour handling (cross‑platform)
+# --------------------------------------------------------------
+# Attempt to import colorama which enables ANSI code processing on
+# Windows. If the module isn't installed we will try to install it
+# automatically; failing that we warn the user and degrade gracefully.
 
-# ----------------------------------------------------------------------
-# Helper: a tiny built‑in word list (feel free to replace with a larger list)
-# ----------------------------------------------------------------------
+try:
+    from colorama import init, Fore, Style
+    init(autoreset=True)
+except ImportError:
+    # We couldn't import colorama. It's nice to have, but not strictly
+    # required: the only reason is to enable ANSI escape processing on
+    # Windows consoles. We can attempt to turn that on manually and then
+    # fallback to raw ANSI codes for the colour constants.
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes, os
+            kernel32 = ctypes.windll.kernel32
+            h = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+            mode = ctypes.c_ulong()
+            if kernel32.GetConsoleMode(h, ctypes.byref(mode)):
+                # ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+                new_mode = mode.value | 0x0004
+                kernel32.SetConsoleMode(h, new_mode)
+            # a dummy os.system call sometimes forces the console to
+            # respect the updated mode on Python <3.9
+            os.system("")
+        except Exception:
+            pass
+
+    # Define simple ANSI values; they may or may not be interpreted but at
+    # least the strings aren't empty.
+    class _Fore:
+        RED = '\033[31m'
+        GREEN = '\033[32m'
+        YELLOW = '\033[33m'
+        WHITE = '\033[37m'
+    class _Style:
+        BRIGHT = '\033[1m'
+        NORMAL = '\033[0m'
+        RESET_ALL = '\033[0m'
+    Fore, Style = _Fore(), _Style()
+
+    print("Warning: 'colorama' module not found. Colours may not display\n"
+          "correctly on this platform. You can install it with:\n"
+          "    pip install colorama")
+
+# --------------------------------------------------------------
+# Tiny built‑in word list
+# --------------------------------------------------------------
 WORD_LIST = [
     "apple", "brave", "cigar", "delta", "eagle",
     "flame", "grape", "honey", "index", "joker",
@@ -23,10 +67,9 @@ WORD_LIST = [
     "ultra", "vivid", "waltz", "xenon", "yacht", "zebra"
 ]
 
-
-# ----------------------------------------------------------------------
+# --------------------------------------------------------------
 # FSM State definition
-# ----------------------------------------------------------------------
+# --------------------------------------------------------------
 class State(enum.Enum):
     WORD_ENTRY = enum.auto()
     CONFIRM = enum.auto()
@@ -37,21 +80,20 @@ class State(enum.Enum):
     DISPLAY = enum.auto()
 
 
-# ----------------------------------------------------------------------
+# --------------------------------------------------------------
 # Core Wordle class
-# ----------------------------------------------------------------------
+# --------------------------------------------------------------
 class Wordle:
     MAX_ATTEMPTS = 6
+    _KB_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
 
     def __init__(self, secret_word: str | None = None):
         self.secret_word: str = secret_word or random.choice(WORD_LIST)
         self.attempt_count: int = 0
         self.has_won: bool = False
         self.attempts: List[str] = []
+        self._key_status: Dict[str, str] = {ch: "WHITE" for ch in "abcdefghijklmnopqrstuvwxyz"}
 
-    # --------------------------------------------------------------
-    # Public API called from the main loop
-    # --------------------------------------------------------------
     def play_round(self) -> None:
         """Run the FSM that drives a single round of Wordle."""
         state = State.WORD_ENTRY
@@ -59,8 +101,9 @@ class Wordle:
 
         while True:
             if state == State.WORD_ENTRY:
+                self._display_keyboard()
                 current_guess = self._word_entry_state()
-                if current_guess is None:          # user chose to quit
+                if current_guess is None:
                     return
                 state = State.CONFIRM
 
@@ -72,6 +115,9 @@ class Wordle:
 
             elif state == State.SCORE:
                 self._score_state(current_guess)
+                # Show updated keyboard immediately after scoring
+                print("\n--- Updated Keyboard ---")
+                self._display_keyboard()
                 state = State.IS_WINNER
 
             elif state == State.IS_WINNER:
@@ -85,18 +131,17 @@ class Wordle:
                 state = State.CONFIRM_AFTER_REVIEW
 
             elif state == State.CONFIRM_AFTER_REVIEW:
-                # No extra confirmation needed; just loop back
-                state = State.WORD_ENTRY
+                if self.is_game_over():
+                    state = State.DISPLAY
+                else:
+                    state = State.WORD_ENTRY
 
             elif state == State.DISPLAY:
                 self._display_state()
                 return
 
-    # --------------------------------------------------------------
-    # FSM state implementations
-    # --------------------------------------------------------------
     def _word_entry_state(self) -> str | None:
-        """Prompt for a 5‑letter guess. Return None if the player quits."""
+        """Prompt for a 5‑letter guess."""
         while True:
             guess = input("\nEnter a 5‑letter guess (or type 'quit' to exit round): ").strip().lower()
             if guess == "quit":
@@ -118,9 +163,10 @@ class Wordle:
             print("Please answer with 'y' or 'n'.")
 
     def _score_state(self, guess: str) -> None:
-        """Record the guess and increment the attempt counter."""
+        """Record the guess, increment the attempt counter, and update keyboard."""
         self.attempts.append(guess)
         self.attempt_count += 1
+        self._update_key_status(guess)
 
     def _is_winner_state(self) -> bool:
         """Check whether the latest guess matches the secret word."""
@@ -139,7 +185,6 @@ class Wordle:
             elif ch in self.secret_word:
                 present.append(ch)
 
-        # Remove duplicates for cleaner output
         present = sorted(set(present))
         correct_pos = sorted(set(correct_pos))
 
@@ -162,28 +207,77 @@ class Wordle:
         print(f"Attempts used: {self.attempt_count}/{self.MAX_ATTEMPTS}")
         print("Your guesses:")
         for i, g in enumerate(self.attempts, start=1):
-            print(f"  {i}: {g}")
+            colored_guess = ""
+            for idx, ch in enumerate(g):
+                if ch == self.secret_word[idx]:
+                    colored_guess += f"{Fore.GREEN}{ch.upper()}{Style.RESET_ALL}"
+                elif ch in self.secret_word:
+                    colored_guess += f"{Fore.YELLOW}{ch.upper()}{Style.RESET_ALL}"
+                else:
+                    colored_guess += f"{Fore.RED}{ch.upper()}{Style.RESET_ALL}"
+            print(f"  {i}: {colored_guess}")
+
+        # Show final keyboard
+        print("\nFinal Keyboard Status:")
+        self._display_keyboard()
 
         if self.has_won:
-            print("\nYou Won!")
+            print(f"\n{Fore.GREEN}You Won!{Style.RESET_ALL}")
         else:
-            print("\nYou Lost.")
+            print(f"\n{Fore.RED}You Lost.{Style.RESET_ALL}")
         input("\nPress Enter to return to the main menu...")
 
-    # --------------------------------------------------------------
-    # Convenience method for external callers (not part of FSM)
-    # --------------------------------------------------------------
     def is_game_over(self) -> bool:
         """True if win or max attempts reached."""
         return self.has_won or self.attempt_count >= self.MAX_ATTEMPTS
 
+    def _update_key_status(self, guess: str) -> None:
+        """
+        Update the stored colour for each letter based on the most recent guess.
+        The hierarchy is: GREEN > YELLOW > RED > WHITE.
+        """
+        for idx, ch in enumerate(guess):
+            if ch == self.secret_word[idx]:
+                new_colour = "GREEN"
+            elif ch in self.secret_word:
+                new_colour = "YELLOW"
+            else:
+                new_colour = "RED"
 
-# ----------------------------------------------------------------------
+            current = self._key_status[ch]
+            hierarchy = {"WHITE": 0, "RED": 1, "YELLOW": 2, "GREEN": 3}
+            if hierarchy[new_colour] > hierarchy[current]:
+                self._key_status[ch] = new_colour
+
+    def _display_keyboard(self) -> None:
+        """Print the QWERTY keyboard with current colour coding."""
+        colour_map = {
+            "WHITE": Fore.WHITE + Style.BRIGHT,
+            "RED":   Fore.RED + Style.BRIGHT,
+            "YELLOW": Fore.YELLOW + Style.BRIGHT,
+            "GREEN": Fore.GREEN + Style.BRIGHT,
+        }
+
+        print("\n" + "="*40)
+        print("KEYBOARD STATUS:")
+        print("="*40)
+        for row in self._KB_ROWS:
+            line = ""
+            for ch in row:
+                col = colour_map[self._key_status[ch]]
+                line += f"{col}{ch.upper()}{Style.RESET_ALL} "
+            print(f"  {line.rstrip()}")
+        print("="*40)
+
+
+# --------------------------------------------------------------
 # Main menu loop
-# ----------------------------------------------------------------------
+# --------------------------------------------------------------
 def main_menu() -> None:
     while True:
-        print("\n=== Wordle FSM ===")
+        print("\n" + "="*40)
+        print("=== Wordle FSM ===")
+        print("="*40)
         print("1) Play a round of Wordle")
         print("2) Leave")
         choice = input("Select an option (1‑2): ").strip()
@@ -192,7 +286,7 @@ def main_menu() -> None:
             game = Wordle()
             game.play_round()
         elif choice == "2":
-            print("\nThanks for Playing and come back another time!")
+            print("\nThanks for playing – come back another time!")
             sys.exit(0)
         else:
             print("Invalid selection – please choose 1 or 2.")
