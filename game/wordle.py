@@ -3,7 +3,7 @@
 import random
 from typing import List, Dict, Optional
 
-from game.constants import WORD_LIST, MAX_ATTEMPTS, WORD_LENGTH, COLOUR_HIERARCHY
+from game.constants import MAX_ATTEMPTS, WORD_LENGTH, generate_secret_word
 from game.states import State
 from models.letter_bag import LetterBag
 from models.keyboard import Keyboard
@@ -15,7 +15,7 @@ class Wordle:
     """Main Wordle game class implementing the FSM"""
     
     def __init__(self, secret_word: Optional[str] = None):
-        self.secret_word: str = secret_word or random.choice(WORD_LIST)
+        self.secret_word: str = secret_word or generate_secret_word()
         self.attempt_count: int = 0
         self.has_won: bool = False
         self.attempts: List[str] = []
@@ -30,6 +30,11 @@ class Wordle:
 
         while True:
             if state == State.WORD_ENTRY:
+                # Check if game is over before allowing another guess
+                if self.is_game_over():
+                    state = State.DISPLAY
+                    continue
+                    
                 self.display.show_game_status(self)
                 self.keyboard.display()
                 current_guess = self._word_entry_state()
@@ -61,10 +66,7 @@ class Wordle:
 
             elif state == State.REVIEW:
                 self._review_state(current_guess)
-                state = State.BAG_MENU
-
-            elif state == State.BAG_MENU:
-                self._bag_menu_state()
+                # Check if game is over after review
                 if self.is_game_over():
                     state = State.DISPLAY
                 else:
@@ -79,8 +81,6 @@ class Wordle:
         while True:
             print("\nOptions:")
             print("  - Enter a 5-letter guess")
-            print("  - Type 'bag' to access the letter bag")
-            print("  - Type 'status' to view bag status")
             print("  - Type 'quit' to exit round")
             
             user_input = input("\nYour choice: ").strip().lower()
@@ -88,15 +88,14 @@ class Wordle:
             if user_input == "quit":
                 print("Round aborted by player.")
                 return None
-            elif user_input == "bag":
-                self._bag_menu_state()
-                continue
-            elif user_input == "status":
-                self.letter_bag.display_status()
-                continue
             
             if len(user_input) != WORD_LENGTH or not user_input.isalpha():
                 print(f"Invalid input – please enter exactly {WORD_LENGTH} letters.")
+                continue
+            
+            # Check if guess has duplicate letters
+            if len(set(user_input)) != WORD_LENGTH:
+                print(f"Your guess has duplicate letters. The secret word has all unique letters!")
                 continue
             
             return user_input
@@ -119,8 +118,6 @@ class Wordle:
 
     def _process_guess_letters(self, guess: str) -> None:
         """Process each letter in the guess and update bag accordingly"""
-        print(f"\n{Fore.MAGENTA}--- Processing Letter Status ---{Style.RESET_ALL}")
-        
         # Determine status of each letter
         letter_status = self._get_letter_status(guess)
         
@@ -143,9 +140,6 @@ class Wordle:
                     self.letter_bag.remove_red_letter(ch)
             
             processed.add(ch)
-        
-        print(f"{Fore.MAGENTA}--- Processing Complete ---{Style.RESET_ALL}")
-        self.letter_bag.display_status()
 
     def _get_letter_status(self, guess: str) -> Dict[str, str]:
         """Get the status of each letter in the guess"""
@@ -195,85 +189,16 @@ class Wordle:
             print("No letters are in the correct position.")
         print(f"{Fore.CYAN}----------------{Style.RESET_ALL}\n")
 
-    def _bag_menu_state(self) -> None:
-        """Handle letter bag interactions"""
-        while not self.is_game_over():
-            print(f"\n{Fore.CYAN}=== LETTER BAG MENU ==={Style.RESET_ALL}")
-            print("1) Pull a letter from the bag")
-            print("2) View detailed bag status")
-            print("3) View available hints")
-            print("4) Return to game")
-            
-            choice = input("Select option (1-4): ").strip()
-            
-            if choice == "1":
-                if not self.letter_bag.can_pull():
-                    print(f"{Fore.RED}No letters available to pull!{Style.RESET_ALL}")
-                else:
-                    letter = self.letter_bag.pull_letter()
-                    if letter:
-                        print(f"\n{Fore.GREEN}You pulled: {letter}{Style.RESET_ALL}")
-                        self._analyze_pulled_letter(letter.lower())
-                    else:
-                        print(f"{Fore.RED}Failed to pull a letter.{Style.RESET_ALL}")
-            
-            elif choice == "2":
-                self.letter_bag.display_status()
-            
-            elif choice == "3":
-                self._display_hints()
-            
-            elif choice == "4":
-                break
-            
-            else:
-                print("Invalid selection – please choose 1-4.")
-
-    def _analyze_pulled_letter(self, letter: str) -> None:
-        """Analyze a pulled letter and provide hints"""
-        print(f"\n{Fore.CYAN}=== Letter Analysis ==={Style.RESET_ALL}")
-        
-        if letter in self.secret_word:
-            print(f"{Fore.GREEN}Good news! '{letter.upper()}' IS in the secret word!{Style.RESET_ALL}")
-            
-            positions = [i+1 for i, ch in enumerate(self.secret_word) if ch == letter]
-            if len(positions) == 1:
-                print(f"It appears in position {positions[0]}")
-            else:
-                print(f"It appears in positions: {', '.join(map(str, positions))}")
-        else:
-            print(f"{Fore.RED}Sorry, '{letter.upper()}' is NOT in the secret word.{Style.RESET_ALL}")
-            print("This letter will be removed permanently if you guess it.")
-        
-        print(f"{Fore.CYAN}===================={Style.RESET_ALL}")
-
-    def _display_hints(self) -> None:
-        """Show available hint information"""
-        contents = self.letter_bag.get_contents()
-        
-        print(f"\n{Fore.CYAN}=== HINT SUMMARY ==={Style.RESET_ALL}")
-        
-        if contents["green"]:
-            print(f"{Fore.GREEN}✅ Locked correct letters: {' '.join(contents['green'])}{Style.RESET_ALL}")
-        
-        if contents["yellow"]:
-            print(f"{Fore.YELLOW}🟡 Letters in word (wrong position): {' '.join(contents['yellow'])}{Style.RESET_ALL}")
-        
-        if contents["removed"]:
-            print(f"{Fore.RED}❌ Letters not in word: {' '.join(contents['removed'])}{Style.RESET_ALL}")
-        
-        if contents["available"]:
-            print(f"{Fore.WHITE}📦 Available to pull: {' '.join(contents['available'])}{Style.RESET_ALL}")
-        else:
-            print(f"{Fore.WHITE}📦 No letters available to pull{Style.RESET_ALL}")
-        
-        print(f"{Fore.CYAN}==================={Style.RESET_ALL}")
-
     def _display_state(self) -> None:
         """Show all attempts, attempt count, and final outcome."""
         self.display.show_final_results(self)
         self.letter_bag.display_status()
         self.keyboard.display()
+        
+        # Add explicit message about running out of attempts
+        if self.attempt_count >= MAX_ATTEMPTS and not self.has_won:
+            print(f"\n{Fore.RED}You've used all {MAX_ATTEMPTS} attempts!{Style.RESET_ALL}")
+        
         input("\nPress Enter to return to the main menu...")
 
     def is_game_over(self) -> bool:

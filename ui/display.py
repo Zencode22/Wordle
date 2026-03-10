@@ -10,7 +10,7 @@ class Display:
     
     @staticmethod
     def show_game_status(game: Any) -> None:
-        """Display current game status"""
+        """Display current game status (hides bag contents)"""
         print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
         print(f"Attempt {game.attempt_count + 1}/{MAX_ATTEMPTS}")
         
@@ -20,13 +20,18 @@ class Display:
                 colored = game.get_colored_guess(guess)
                 print(f"  {i}: {colored}")
         
-        # Show bag summary
+        # Show only minimal bag info - just the count
         contents = game.letter_bag.get_contents()
         print(f"\nBag Summary:")
-        print(f"  {Fore.WHITE}Available: {len(contents['available'])} letters{Style.RESET_ALL}")
-        print(f"  {Fore.GREEN}Green (locked): {len(contents['green'])}{Style.RESET_ALL}")
-        print(f"  {Fore.YELLOW}Yellow (returned): {len(contents['yellow'])}{Style.RESET_ALL}")
-        print(f"  {Fore.RED}Red (removed): {len(contents['removed'])}{Style.RESET_ALL}")
+        print(f"  {Fore.WHITE}Letters remaining in bag: {contents['count_available']}{Style.RESET_ALL}")
+        
+        # Show pulled letters if any
+        pulled = game.letter_bag.get_pulled_letters()
+        if pulled:
+            # Only show unique pulled letters, not all pulls
+            unique_pulled = sorted(set(pulled))
+            print(f"  {Fore.CYAN}Letters you've pulled: {' '.join(unique_pulled)}{Style.RESET_ALL}")
+        
         print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
 
     @staticmethod

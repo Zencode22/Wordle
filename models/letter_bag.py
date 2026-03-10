@@ -42,7 +42,7 @@ class LetterBag:
             self.available_letters.append(letter)
             self.yellow_letters.add(letter)
             random.shuffle(self.available_letters)
-            print(f"{Fore.YELLOW}Letter {letter} returned to bag (yellow status){Style.RESET_ALL}")
+            # Don't show message - let the player discover through gameplay
     
     def remove_red_letter(self, letter: str) -> None:
         """Permanently remove a red letter from the game"""
@@ -52,7 +52,7 @@ class LetterBag:
             self.available_letters.remove(letter)
         if letter in self.yellow_letters:
             self.yellow_letters.remove(letter)
-        print(f"{Fore.RED}Letter {letter} removed permanently (red status){Style.RESET_ALL}")
+        # Don't show message - let the player discover through gameplay
     
     def lock_green_letter(self, letter: str) -> None:
         """Lock a green letter (remove from bag, keep on board)"""
@@ -62,47 +62,48 @@ class LetterBag:
             self.available_letters.remove(letter)
         if letter in self.yellow_letters:
             self.yellow_letters.remove(letter)
-        print(f"{Fore.GREEN}Letter {letter} locked in place (green status){Style.RESET_ALL}")
+        # Don't show message - let the player discover through gameplay
     
     def get_contents(self) -> Dict[str, List[str]]:
-        """Get current bag status for display"""
-        available = self._get_available_pullable_letters()
-        
+        """Get current bag status for display (hides available letters)"""
         return {
-            "available": sorted(available),
+            "available": [],  # Hide available letters from player
             "yellow": sorted(self.yellow_letters),
             "green": sorted(self.green_letters),
-            "removed": sorted(self.permanently_removed)
+            "removed": sorted(self.permanently_removed),
+            "count_available": len(self._get_available_pullable_letters())  # Only show count
         }
     
     def display_status(self) -> None:
-        """Show bag contents with colour coding"""
+        """Show bag contents with colour coding (hides available letters)"""
         contents = self.get_contents()
         
         print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}LETTER BAG STATUS{Style.RESET_ALL}")
         print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
         
-        if contents["available"]:
-            print(f"{Fore.WHITE}Available in bag ({len(contents['available'])}): {' '.join(contents['available'])}{Style.RESET_ALL}")
-        else:
-            print(f"{Fore.WHITE}No letters available in bag{Style.RESET_ALL}")
+        # Only show the COUNT of available letters, not which ones
+        print(f"{Fore.WHITE}Letters remaining in bag: {contents['count_available']}{Style.RESET_ALL}")
         
         if contents["yellow"]:
-            print(f"{Fore.YELLOW}Yellow letters (returned): {' '.join(contents['yellow'])}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}Yellow letters (in word, wrong position): {' '.join(contents['yellow'])}{Style.RESET_ALL}")
         
         if contents["green"]:
-            print(f"{Fore.GREEN}Green letters (locked): {' '.join(contents['green'])}{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}Green letters (locked correct): {' '.join(contents['green'])}{Style.RESET_ALL}")
         
         if contents["removed"]:
-            print(f"{Fore.RED}Red letters (removed): {' '.join(contents['removed'])}{Style.RESET_ALL}")
+            print(f"{Fore.RED}Red letters (not in word): {' '.join(contents['removed'])}{Style.RESET_ALL}")
         
         if self.pulled_history:
             history = " → ".join(self.pulled_history[-10:])
-            print(f"\nPull history (last 10): {history}")
+            print(f"\nLetters you've pulled (last 10): {history}")
         
         print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")
     
     def can_pull(self) -> bool:
         """Check if any letters are available to pull"""
         return len(self._get_available_pullable_letters()) > 0
+    
+    def get_pulled_letters(self) -> List[str]:
+        """Get list of pulled letters"""
+        return self.pulled_history

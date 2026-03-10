@@ -1,45 +1,35 @@
-"""Main menu system for the Wordle game"""
+"""Main menu and navigation for the Wordle game"""
 
-import sys
 from utils.colours import Fore, Style
 from game.wordle import Wordle
 
 
 class MainMenu:
-    """Handles the main menu and user interaction"""
+    """Handles main menu display and navigation"""
     
     @staticmethod
     def show() -> None:
         """Display the main menu and handle user choices"""
         while True:
-            MainMenu._display_header()
-            MainMenu._display_options()
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}=== WORDLE WITH DYNAMIC LETTER BAG ==={Style.RESET_ALL}")
+            print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print("\n1. Start New Game")
+            print("2. How to Play")
+            print("3. Quit")
             
-            choice = input("\nSelect an option (1‑3): ").strip()
-
+            choice = input("\nSelect option (1-3): ").strip()
+            
             if choice == "1":
                 game = Wordle()
                 game.play_round()
             elif choice == "2":
                 MainMenu._show_instructions()
             elif choice == "3":
-                MainMenu._exit_game()
+                print(f"\n{Fore.GREEN}Thanks for playing! Goodbye!{Style.RESET_ALL}")
+                break
             else:
-                print(f"{Fore.RED}Invalid selection – please choose 1, 2, or 3.{Style.RESET_ALL}")
-
-    @staticmethod
-    def _display_header() -> None:
-        """Display the game header"""
-        print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}=== WORDLE GAME with DYNAMIC LETTER BAG ==={Style.RESET_ALL}")
-        print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
-
-    @staticmethod
-    def _display_options() -> None:
-        """Display menu options"""
-        print("1) Play a round of Wordle")
-        print("2) View game instructions")
-        print("3) Leave")
+                print(f"{Fore.RED}Invalid choice. Please enter 1, 2, or 3.{Style.RESET_ALL}")
 
     @staticmethod
     def _show_instructions() -> None:
@@ -54,28 +44,24 @@ class MainMenu:
    - 🟨 YELLOW: Letter is in the word but wrong position
    - 🟥 RED: Letter is not in the word
 
-3. DYNAMIC LETTER BAG SYSTEM:
-   - The bag starts with one of each letter (A-Z)
+3. DYNAMIC LETTER BAG SYSTEM (HIDDEN):
+   - The bag starts with one of each letter (A-Z), but you CAN'T see what's inside!
    - 🟩 GREEN letters: Locked in place and removed from bag permanently
-   - 🟨 YELLOW letters: Returned to the bag (can be pulled again)
+   - 🟨 YELLOW letters: Returned to the bag (can be pulled again later)
    - 🟥 RED letters: Removed from the game permanently
    
 4. STRATEGY:
-   - Pull letters from the bag to get hints
-   - Yellow letters can be reused in different positions
+   - Pull letters from the bag to discover what's inside
+   - Each pull reveals if the letter is in the secret word
+   - Yellow letters can be reused - try them in different positions
    - Red letters are gone forever - avoid guessing them!
    - Green letters are locked - focus on finding the remaining letters
+   - The bag is a mystery - you only know what you've pulled!
 
-5. Commands:
+5. Commands during gameplay:
    - Type your 5-letter guess to play
-   - Type 'bag' to access the letter bag menu
-   - Type 'status' to view bag status
+   - Type 'bag' to access the letter bag menu (pull letters)
+   - Type 'status' to see what you've learned so far
    - Type 'quit' to exit the current round
         """)
         input("\nPress Enter to return to the main menu...")
-
-    @staticmethod
-    def _exit_game() -> None:
-        """Exit the game gracefully"""
-        print(f"\n{Fore.GREEN}Thanks for playing – come back another time!{Style.RESET_ALL}")
-        sys.exit(0)

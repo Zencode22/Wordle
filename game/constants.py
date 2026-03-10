@@ -1,17 +1,7 @@
 """Game constants and configuration"""
 
-# Word list for the game
-WORD_LIST = [
-    "apple", "brave", "cigar", "delta", "eagle",
-    "flame", "grape", "honey", "index", "joker",
-    "karma", "lemon", "mango", "nerve", "ocean",
-    "piano", "queen", "raven", "spice", "tiger",
-    "ultra", "vivid", "waltz", "xenon", "yacht", "zebra",
-    "cloud", "dream", "earth", "frost", "ghost", "heart",
-    "irony", "jolly", "knock", "laugh", "mimic", "night",
-    "opera", "pride", "quest", "rusty", "sugar", "truth",
-    "umbra", "vocal", "whale", "xerox", "yield", "zonal"
-]
+import random
+import string
 
 # Game settings
 MAX_ATTEMPTS = 6
@@ -27,3 +17,19 @@ COLOUR_HIERARCHY = {
     "YELLOW": 2,
     "GREEN": 3
 }
+
+def generate_secret_word() -> str:
+    """
+    Generate a random 5-letter word with no duplicate letters
+    by randomly selecting 5 unique letters from the alphabet
+    """
+    # Get all lowercase letters
+    alphabet = list(string.ascii_lowercase)
+    
+    # Shuffle to ensure randomness
+    random.shuffle(alphabet)
+    
+    # Take first 5 letters (guaranteed unique because we're taking from the shuffled list)
+    word = ''.join(alphabet[:WORD_LENGTH])
+    
+    return word
