@@ -1,8 +1,6 @@
 """Core Wordle game logic with FSM implementation"""
 
-import random
 from typing import List, Dict, Optional
-
 from game.constants import MAX_ATTEMPTS, WORD_LENGTH, generate_secret_word
 from game.states import State
 from models.letter_bag import LetterBag
@@ -15,13 +13,20 @@ class Wordle:
     """Main Wordle game class implementing the FSM"""
     
     def __init__(self, secret_word: Optional[str] = None):
-        self.secret_word: str = secret_word or generate_secret_word()
+        """Initialize the game with a secret word"""
+        if secret_word:
+            self.secret_word: str = secret_word
+        else:
+            print("Fetching a valid 5-letter word from dictionary...")
+            self.secret_word: str = generate_secret_word()
+            print("Word selected successfully! (It's a valid English word)")
+        
         self.attempt_count: int = 0
         self.has_won: bool = False
         self.attempts: List[str] = []
-        self.letter_bag = LetterBag()
-        self.keyboard = Keyboard()
-        self.display = Display()
+        self.letter_bag: LetterBag = LetterBag()
+        self.keyboard: Keyboard = Keyboard()
+        self.display: Display = Display()
         
     def play_round(self) -> None:
         """Run the FSM that drives a single round of Wordle"""
@@ -30,7 +35,6 @@ class Wordle:
 
         while True:
             if state == State.WORD_ENTRY:
-                # Check if game is over before allowing another guess
                 if self.is_game_over():
                     state = State.DISPLAY
                     continue
@@ -66,7 +70,6 @@ class Wordle:
 
             elif state == State.REVIEW:
                 self._review_state(current_guess)
-                # Check if game is over after review
                 if self.is_game_over():
                     state = State.DISPLAY
                 else:
@@ -77,7 +80,7 @@ class Wordle:
                 return
 
     def _word_entry_state(self) -> Optional[str]:
-        """Prompt for a 5‑letter guess."""
+        """Prompt for a 5-letter guess."""
         while True:
             print("\nOptions:")
             print("  - Enter a 5-letter guess")
@@ -90,12 +93,11 @@ class Wordle:
                 return None
             
             if len(user_input) != WORD_LENGTH or not user_input.isalpha():
-                print(f"Invalid input – please enter exactly {WORD_LENGTH} letters.")
+                print(f"Invalid input - please enter exactly {WORD_LENGTH} letters.")
                 continue
             
-            # Check if guess has duplicate letters
             if len(set(user_input)) != WORD_LENGTH:
-                print(f"Your guess has duplicate letters. The secret word has all unique letters!")
+                print("Your guess has duplicate letters. The secret word has all unique letters!")
                 continue
             
             return user_input
@@ -118,10 +120,8 @@ class Wordle:
 
     def _process_guess_letters(self, guess: str) -> None:
         """Process each letter in the guess and update bag accordingly"""
-        # Determine status of each letter
         letter_status = self._get_letter_status(guess)
         
-        # Process each unique letter based on its highest status
         processed = set()
         for ch in guess:
             if ch in processed:
@@ -134,7 +134,7 @@ class Wordle:
             elif status == "YELLOW":
                 if ch.upper() not in self.letter_bag.green_letters:
                     self.letter_bag.return_yellow_letter(ch)
-            else:  # RED
+            else:
                 if (ch.upper() not in self.letter_bag.green_letters and 
                     ch.upper() not in self.letter_bag.yellow_letters):
                     self.letter_bag.remove_red_letter(ch)
@@ -148,11 +148,9 @@ class Wordle:
             if ch == self.secret_word[idx]:
                 letter_status[ch] = "GREEN"
             elif ch in self.secret_word:
-                # Only set to YELLOW if not already GREEN
                 if letter_status.get(ch) != "GREEN":
                     letter_status[ch] = "YELLOW"
             else:
-                # Only set to RED if not already GREEN or YELLOW
                 if ch not in letter_status:
                     letter_status[ch] = "RED"
         return letter_status
@@ -195,7 +193,6 @@ class Wordle:
         self.letter_bag.display_status()
         self.keyboard.display()
         
-        # Add explicit message about running out of attempts
         if self.attempt_count >= MAX_ATTEMPTS and not self.has_won:
             print(f"\n{Fore.RED}You've used all {MAX_ATTEMPTS} attempts!{Style.RESET_ALL}")
         
