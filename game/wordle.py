@@ -195,6 +195,8 @@ class Wordle:
         
         if self.attempt_count >= MAX_ATTEMPTS and not self.has_won:
             print(f"\n{Fore.RED}You've used all {MAX_ATTEMPTS} attempts!{Style.RESET_ALL}")
+            # Show the secret word in red letters when player loses
+            print(f"{Fore.RED}The secret word was: {self.secret_word.upper()}{Style.RESET_ALL}")
         
         input("\nPress Enter to return to the main menu...")
 

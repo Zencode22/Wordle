@@ -39,7 +39,13 @@ class Display:
         """Display final game results"""
         print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}=== Game Over ==={Style.RESET_ALL}")
-        print(f"Secret word: {game.secret_word.upper()}")
+        
+        # Show secret word in appropriate color based on win/loss
+        if game.has_won:
+            print(f"Secret word: {Fore.GREEN}{game.secret_word.upper()}{Style.RESET_ALL}")
+        else:
+            print(f"Secret word: {Fore.RED}{game.secret_word.upper()}{Style.RESET_ALL}")
+        
         print(f"Attempts used: {game.attempt_count}/{MAX_ATTEMPTS}")
         
         print("\nYour guesses:")
