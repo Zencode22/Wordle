@@ -1,6 +1,7 @@
 """Cross-platform colour handling for terminal output"""
 
 import sys
+import os
 
 # Try to use colorama for Windows support
 try:
@@ -43,6 +44,16 @@ except ImportError:
 
     # Print warning only once
     print("Note: Install 'colorama' for better Windows support: pip install colorama")
+
+
+def clear_screen():
+    """Clear the terminal screen across platforms"""
+    # For Windows
+    if os.name == 'nt':
+        os.system('cls')
+    # For Unix/Linux/MacOS
+    else:
+        os.system('clear')
 
 
 def init_colours():

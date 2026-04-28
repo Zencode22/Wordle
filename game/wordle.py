@@ -6,7 +6,7 @@ from game.states import State
 from models.letter_bag import LetterBag
 from models.keyboard import Keyboard
 from ui.display import Display
-from utils.colours import Fore, Style
+from utils.colours import Fore, Style, clear_screen
 
 
 class Wordle:
@@ -38,7 +38,8 @@ class Wordle:
                 if self.is_game_over():
                     state = State.DISPLAY
                     continue
-                    
+                
+                clear_screen()
                 self.display.show_game_status(self)
                 self.keyboard.display()
                 current_guess = self._word_entry_state()
@@ -53,6 +54,7 @@ class Wordle:
                     state = State.WORD_ENTRY
 
             elif state == State.SCORE:
+                clear_screen()
                 self._score_state(current_guess)
                 print("\n--- Scoring Guess ---")
                 self.keyboard.display()
@@ -76,6 +78,7 @@ class Wordle:
                     state = State.WORD_ENTRY
 
             elif state == State.DISPLAY:
+                clear_screen()
                 self._display_state()
                 return
 
@@ -186,6 +189,8 @@ class Wordle:
         else:
             print("No letters are in the correct position.")
         print(f"{Fore.CYAN}----------------{Style.RESET_ALL}\n")
+        
+        input("\nPress Enter to continue...")
 
     def _display_state(self) -> None:
         """Show all attempts, attempt count, and final outcome."""
@@ -195,7 +200,6 @@ class Wordle:
         
         if self.attempt_count >= MAX_ATTEMPTS and not self.has_won:
             print(f"\n{Fore.RED}You've used all {MAX_ATTEMPTS} attempts!{Style.RESET_ALL}")
-            # Show the secret word in red letters when player loses
             print(f"{Fore.RED}The secret word was: {self.secret_word.upper()}{Style.RESET_ALL}")
         
         input("\nPress Enter to return to the main menu...")
