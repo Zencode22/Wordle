@@ -48,25 +48,5 @@ class MainMenu:
    - 🟩 GREEN: Letter is correct and in the right position
    - 🟨 YELLOW: Letter is in the word but wrong position
    - 🟥 RED: Letter is not in the word
-
-3. DYNAMIC LETTER BAG SYSTEM (HIDDEN):
-   - The bag starts with one of each letter (A-Z), but you CAN'T see what's inside!
-   - 🟩 GREEN letters: Locked in place and removed from bag permanently
-   - 🟨 YELLOW letters: Returned to the bag (can be pulled again later)
-   - 🟥 RED letters: Removed from the game permanently
-   
-4. STRATEGY:
-   - Pull letters from the bag to discover what's inside
-   - Each pull reveals if the letter is in the secret word
-   - Yellow letters can be reused - try them in different positions
-   - Red letters are gone forever - avoid guessing them!
-   - Green letters are locked - focus on finding the remaining letters
-   - The bag is a mystery - you only know what you've pulled!
-
-5. Commands during gameplay:
-   - Type your 5-letter guess to play
-   - Type 'bag' to access the letter bag menu (pull letters)
-   - Type 'status' to see what you've learned so far
-   - Type 'quit' to exit the current round
         """)
         input("\nPress Enter to return to the main menu...")

@@ -54,10 +54,7 @@ class Wordle:
                     state = State.WORD_ENTRY
 
             elif state == State.SCORE:
-                clear_screen()
                 self._score_state(current_guess)
-                print("\n--- Scoring Guess ---")
-                self.keyboard.display()
                 state = State.PROCESS_LETTERS
 
             elif state == State.PROCESS_LETTERS:
@@ -66,13 +63,6 @@ class Wordle:
 
             elif state == State.IS_WINNER:
                 if self._is_winner_state():
-                    state = State.DISPLAY
-                else:
-                    state = State.REVIEW
-
-            elif state == State.REVIEW:
-                self._review_state(current_guess)
-                if self.is_game_over():
                     state = State.DISPLAY
                 else:
                     state = State.WORD_ENTRY
@@ -163,34 +153,6 @@ class Wordle:
         if self.attempts[-1] == self.secret_word:
             self.has_won = True
         return self.has_won
-
-    def _review_state(self, guess: str) -> None:
-        """Provide feedback about present letters and correct positions."""
-        present = []
-        correct_pos = []
-
-        for idx, ch in enumerate(guess):
-            if ch == self.secret_word[idx]:
-                correct_pos.append(ch)
-            elif ch in self.secret_word:
-                present.append(ch)
-
-        present = sorted(set(present))
-        correct_pos = sorted(set(correct_pos))
-
-        print(f"\n{Fore.CYAN}--- Review ---{Style.RESET_ALL}")
-        if present:
-            print(f"Letters in the word (any position): {', '.join(present)}")
-        else:
-            print("No new letters from your guess are in the secret word.")
-
-        if correct_pos:
-            print(f"Letters in the correct position: {', '.join(correct_pos)}")
-        else:
-            print("No letters are in the correct position.")
-        print(f"{Fore.CYAN}----------------{Style.RESET_ALL}\n")
-        
-        input("\nPress Enter to continue...")
 
     def _display_state(self) -> None:
         """Show all attempts, attempt count, and final outcome."""
